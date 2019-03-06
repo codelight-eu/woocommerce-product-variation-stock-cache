@@ -11,6 +11,13 @@ namespace Codelight\VariationStockCache;
  */
 class VariationStockManager
 {
+    /**
+     * Default cache key prefix for the post meta
+     *
+     * @var string
+     */
+    protected $keyPrefix = '_codelight_stock';
+
     /* @var Cache */
     protected $cache;
 
@@ -29,6 +36,8 @@ class VariationStockManager
     {
         add_action('woocommerce_product_set_stock_status', [$this, 'cacheVariableStockData'], 10, 3);
         add_action('woocommerce_variation_set_stock_status', [$this, 'cacheVariationStockData'], 10, 3);
+
+        add_action('admin_init', [$this, 'primeCache']);
     }
 
     /**
@@ -84,8 +93,37 @@ class VariationStockManager
 
         $cacheKeys = $this->cache->getCacheKeys($attributes);
 
-        foreach ($cacheKeys as $key) {
-            update_post_meta($product->get_parent_id(), $key, $stockStatus);
+        if (is_array($cacheKeys) && count($cacheKeys)) {
+            foreach ($cacheKeys as $key) {
+                update_post_meta($product->get_parent_id(), $key, $stockStatus);
+            }
+        }
+    }
+
+    /**
+     * If an admin request with the GET param ?codelight_prime_cache=1 is made,
+     * prime the cache for all products. This is a quick fix.
+     *
+     * todo: replace with a proper CLI command and batched product updates
+     */
+    public function primeCache()
+    {
+        if (!is_super_admin() or !isset($_GET['codelight_prime_cache'])) {
+            return;
+        }
+
+        $productQuery = new \WP_Query([
+            'post_type' => 'product',
+            'status'    => get_post_stati(),
+            'posts_per_page' => -1,
+        ]);
+
+        foreach ($productQuery->get_posts() as $product) {
+            $product = wc_get_product($product->ID);
+
+            if ($product->get_type() == 'variable') {
+                $this->cacheVariableStockData($product->get_id(), $product->get_stock_status(), $product);
+            }
         }
     }
 }
