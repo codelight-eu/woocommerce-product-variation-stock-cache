@@ -1,0 +1,16 @@
+{
+  "name": "codelight/woocommerce-product-variation-stock-cache",
+  "type": "package",
+  "require": {
+    "php": ">=7.0.0",
+    "composer/installers": "~1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Codelight\\VariationStockCache\\": "src/"
+    },
+    "files": [
+      "bootstrap.php"
+    ]
+  }
+}
